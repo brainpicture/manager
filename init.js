@@ -11,11 +11,16 @@ var TCPServer = false
 var TCPPort = false
 var LogHistory = []
 
-function log() {
-  var args = Array.prototype.slice.call(arguments)
-  var lines = args.join(' ').split("\n")
+function addLog(project, data, color) {
+  var lines = data.split("\n")
   for(var i in lines) {
     var str = lines[i]
+    if (color) {
+      str = "\033[1;3"+color+"m"+str+"\033[0m"
+    }
+    if (project) {
+      str = "\033[1;33m"+project+"\033[0m "+str
+    }
     LogHistory.push(str)
     if (LogHistory.length > 40) {
       LogHistory.shift()
@@ -23,7 +28,6 @@ function log() {
     for(var i in Logging) {
       Logging[i].write(str+"\n")
     }
-    console.log(str);
   }
 }
 
@@ -67,23 +71,22 @@ function stop(name) {
 }
 
 function updateConfig(configPath) {
-  log('starting')
   fs.readFile(configPath, function (err, data) {
     if (err) {
-      log('[error] config read error', err.message)
+      addLog(false, '[error] config read error'+err.message, 1)
     }
     try {
       var confData = eval('({'+data.toString()+'})')
     } catch(e) {
-      log('[error] config syntax:', e.message)
+      addLog(false, '[error] config syntax:'+e.message, 1)
     }
     Condidats = confData.projects
     for (var i in Condidats) {
       if (!Projects[i]) {
-        log('run '+i)
+        addLog(i, 'started')
         run(i, Condidats[i])
       } else if (Projects[i].path != Condidats[i].path) {
-        log('restart '+i)
+        addLog(i, 'restarted')
         stop(i)
         run(i, Condidats[i])
       }
@@ -91,7 +94,7 @@ function updateConfig(configPath) {
     if (!TCPPort) {
       startTCP(confData.port)
     } else if (TCPPort != confData.port) {
-      log('port changed. new port = '+confData.port)
+      addLog(false, 'port changed. new port = '+confData.port, 2)
       stopTCP();
       startTCP(confData.port)
     }
@@ -101,7 +104,7 @@ function updateConfig(configPath) {
   fs.watch(configPath, {persistent: true}, function (curr, prev) {
     if (!watchTimeout) {
       watchTimeout = setTimeout(function() {
-        log('config changed')
+        addLog(false, 'config changed', 2)
         updateConfig(configPath)
       }, 100)
     }
@@ -128,7 +131,7 @@ function command(cmd, args, c, connectNum) {
     case 'restart':
       var name = args.shift()
       if (Projects[name]) {
-        log(name+' restarted')
+        addLog(name, 'restarted')
         stop(name)
         run(name, Condidats[name])
         c.write(name+" restarted\n")
@@ -145,7 +148,7 @@ function command(cmd, args, c, connectNum) {
         }
         Projects[cmd].watching[connectNum] = c
       } else {
-        c.write('unknown command `'+cmd+'`')
+        c.write('unknown command '+cmd+"\n")
         c.end()
       }
       break
@@ -200,4 +203,5 @@ process.on('uncaughtException', function(opts, err) {
   }
 });
 
+addLog(false, 'Manager started', 2)
 updateConfig(path.resolve(__dirname, 'config.json'))

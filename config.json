@@ -1,7 +1,6 @@
 projects: {
   gist: {
-    //path: '../bots/gist/index.js',
-    path: './test.js',
+    path: '../bots/gist/index.js',
   }
 },
 

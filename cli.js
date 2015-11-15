@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var fs = require('fs')
 var path = require('path')
 var net = require('net')
@@ -15,7 +17,6 @@ function parseData(d) {
 }
 
 var client = net.connect({port: confData.port}, function() {
-  console.log(args);
   client.write(args.join(' ')+"\n");
   var d = '';
   client.on('data', function(data) {
@@ -29,3 +30,11 @@ var client = net.connect({port: confData.port}, function() {
     }
   });
 });
+
+client.on('error', function(e) {
+  if (e.code == 'ECONNREFUSED') {
+    console.log('[error] manager not started');
+  } else {
+    console.log(e.message);
+  }
+})
