@@ -1,0 +1,9 @@
+projects: {
+  gist: {
+    //path: '../bots/gist/index.js',
+    path: './test.js',
+  }
+},
+
+port: 8169
+
