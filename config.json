@@ -1,7 +1,7 @@
 projects: {
-  gist: {
-    path: '../bots/gist/index.js',
-  }
+  /*my_project: {
+    path 'path to node project.js'
+  }*/
 },
 
 port: 8169
