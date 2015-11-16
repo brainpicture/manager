@@ -11,15 +11,31 @@ var TCPServer = false
 var TCPPort = false
 var LogHistory = []
 
-function addLog(project, data, color) {
+function color(str, color) {
+  return "\033[1;3"+color+"m"+str+"\033[0m"
+}
+
+function projectLog(name, line) {
+  if (!Projects[name]) {
+    return;
+  }
+  Projects[name].log.push(line)
+  if (Projects[name].log.length > 40) {
+    Projects[name].log.shift()
+  }
+
+  for(var i in Projects[name].watching) {
+    var c = Projects[name].watching[i]
+    c.write(line+"\n")
+  }
+}
+
+function globalLog(project, data) {
   var lines = data.split("\n")
   for(var i in lines) {
     var str = lines[i]
-    if (color) {
-      str = "\033[1;3"+color+"m"+str+"\033[0m"
-    }
     if (project) {
-      str = "\033[1;33m"+project+"\033[0m "+str
+      str = color(project+' ', 3)+str
     }
     LogHistory.push(str)
     if (LogHistory.length > 40) {
@@ -28,17 +44,20 @@ function addLog(project, data, color) {
     for(var i in Logging) {
       Logging[i].write(str+"\n")
     }
+    if (project) {
+      projectLog(project, str)
+    }
   }
 }
 
 function dataToLines(obj, callback) {
-  var d = '';
+  var d = ''
   obj.on('data', function(data) {
     var part = data.toString().split("\n")
     while(part.length) {
       d += part.shift()
       if (part.length) {
-        callback(d);
+        callback(d)
         d = ''
       }
     }
@@ -46,69 +65,75 @@ function dataToLines(obj, callback) {
 }
 
 function run(name, params) {
-  Projects[name] = params
+  if (!Projects[name]) {
+    Projects[name] = {log: [], watching: {}}
+  }
+  for(var i in params) {
+    Projects[name][i] = params[i]
+  }
+  Projects[name].stopped = 0;
   var projectPath = path.resolve(__dirname, params.path)
   var process = child.fork(projectPath, [], {silent: true})
-  Projects[name].log = []
-  Projects[name].watching = {}
   dataToLines(process.stdout, function(line) {
-    Projects[name].log.push(line)
-    if (Projects[name].log.length > 40) {
-      Projects[name].log.shift()
-    }
-
-    for(var i in Projects[name].watching) {
-      var c = Projects[name].watching[i]
-      c.write(line+"\n")
-    }
+    projectLog(name, line)
   })
   process.on('exit', function(code) {
-    delay = Condidats[name].delay || 0;
-    if (new Date().getTime() - Condidats[name].delayTs > 3000) {
+    if (!Condidats[name]) {
+      return
+    }
+    delay = Projects[name].delay || 0;
+    if (new Date().getTime() - Projects[name].delayTs > 3000) {
       delay = 0;
     }
     setTimeout(function() {
       run(name, Condidats[name])
-      Condidats[name].delayTs = new Date().getTime()
+      Projects[name].delayTs = new Date().getTime()
     }, delay * 1000)
-    addLog(name, 'died, restart'+(delay ? ' in '+delay+' sec' : ''))
+    globalLog(name, 'died, restart'+(delay ? ' in '+delay+' sec' : ''))
     if (delay < 60) {
-      Condidats[name].delay = delay + 1;
+      Projects[name].delay = delay + 1
     }
   })
   Projects[name].process = process
 }
 
 function stop(name) {
+  Projects[name].delayTs = new Date().getTime
   Projects[name].process.kill()
-  delete Projects[name]
+  Projects[name].stopped = 1;
+  delete Projects[name].process
 }
 
 function updateConfig(configPath) {
   fs.readFile(configPath, function (err, data) {
     if (err) {
-      addLog(false, '[error] config read error'+err.message, 1)
+      globalLog(false, '[error] config read error'+err.message, 1)
     }
     try {
       var confData = eval('({'+data.toString()+'})')
     } catch(e) {
-      addLog(false, '[error] config syntax:'+e.message, 1)
+      globalLog(false, '[error] config syntax:'+e.message, 1)
     }
     Condidats = confData.projects
     for (var i in Condidats) {
-      if (!Projects[i]) {
-        addLog(i, 'started')
+      if (!Projects[i] || Projects[i].stopped) {
         run(i, Condidats[i])
+        globalLog(i, 'started')
       } else if (Projects[i].path != Condidats[i].path) {
-        addLog(i, 'restarted')
         stop(i)
-        run(i, Condidats[i])
+        globalLog(i, 'restarted')
+      }
+    }
+    for(var i in Projects) {
+      if (!Condidats[i]) {
+        stop(i)
+        globalLog(i, 'stopped')
       }
     }
     if (!TCPPort) {
       startTCP(confData.port)
     } else if (TCPPort != confData.port) {
-      addLog(false, 'port changed. new port = '+confData.port, 2)
+      globalLog(false, 'port changed. new port = '+confData.port, 2)
       stopTCP();
       startTCP(confData.port)
     }
@@ -118,7 +143,7 @@ function updateConfig(configPath) {
   fs.watch(configPath, {persistent: true}, function (curr, prev) {
     if (!watchTimeout) {
       watchTimeout = setTimeout(function() {
-        addLog(false, 'config changed', 2)
+        globalLog(false, 'config changed', 2)
         updateConfig(configPath)
       }, 100)
     }
@@ -145,10 +170,8 @@ function command(cmd, args, c, connectNum) {
     case 'restart':
       var name = args.shift()
       if (Projects[name]) {
-        addLog(name, 'restarted')
+        globalLog(name, 'restarted')
         stop(name)
-        run(name, Condidats[name])
-        c.write(name+" restarted\n")
       } else {
         c.write("no such project\n")
       }
@@ -175,7 +198,7 @@ function startTCP(port) {
     var connectNum = ++NumTCP
     c.on('end', function() {
       delete Logging[connectNum]
-      for(var i in Projects) {
+      for(var i in Condidats) {
         delete Projects[i].watching[connectNum]
       }
     });
@@ -211,11 +234,12 @@ process.on('SIGINT', function() {
   onExit()
   process.exit()
 });
-process.on('uncaughtException', function(opts, err) {
-  if (err) {
-    console.err(err)
-  }
+process.on('uncaughtException', function(err) {
+  console.log(err.stack);
+  try {
+    globalLog(false, err.stack);
+  } catch(e) {}
 });
 
-addLog(false, 'Manager started', 2)
+globalLog(false, color('Manager started', 2))
 updateConfig(path.resolve(__dirname, 'config.json'))
