@@ -1,7 +1,7 @@
 MANAGER
 =======
 
-Manager is daemon control tool for Node.js projects
+Manager is a daemon control tool for Node.js projects
 
 ### Installation (Linux only)
 ```
@@ -11,14 +11,14 @@ sudo make install
 ```
 
 ### Usage
-* **manager log** - get manager log
+* **manager log** - get the manager log
 * **manager list** - list all projects
-* **manager project_name** - get stdout of selected project
-* **manager restart project_name** - restart project
+* **manager project_name** - get stdout of the selected project
+* **manager restart project_name** - restart a project
 
-Manager will be launched as daemon from the directory, you install it from, and will start with system startup
+Manager will be launched as a daemon from the directory it is installed to, and will start at the system startup.
 
-Edit config.json to add or remove projects, manager will automaticly update settings after config.json will be saved
+Edit config.json to add or remove projects, manager will automaticly update settings after config.json is saved.
 
 ### Config format
 ```
@@ -28,11 +28,11 @@ projects: {
   }
 },
 
-port: 8169 // port, daemon will use for communication with client
+port: 8169 // port the daemon will use to communicate with a client
 ```
 
-You can restart manager daemon using
+You can restart the manager daemon using
 ```
 restart manager
 ```
-but with normal usage it never would be neaded
+but during normal usage this would never be needed
