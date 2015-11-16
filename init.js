@@ -62,6 +62,20 @@ function run(name, params) {
       c.write(line+"\n")
     }
   })
+  process.on('exit', function(code) {
+    delay = Condidats[name].delay || 0;
+    if (new Date().getTime() - Condidats[name].delayTs > 3000) {
+      delay = 0;
+    }
+    setTimeout(function() {
+      run(name, Condidats[name])
+      Condidats[name].delayTs = new Date().getTime()
+    }, delay * 1000)
+    addLog(name, 'died, restart'+(delay ? ' in '+delay+' sec' : ''))
+    if (delay < 60) {
+      Condidats[name].delay = delay + 1;
+    }
+  })
   Projects[name].process = process
 }
 

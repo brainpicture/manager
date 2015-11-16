@@ -1,7 +1,10 @@
 projects: {
-  /*my_project: {
-    path 'path to node project.js'
-  }*/
+  gist: {
+    path: '../bots/gist/index.js',
+  },
+  geochat: {
+    path: '../bots/geochat/index.js',
+  },
 },
 
 port: 8169

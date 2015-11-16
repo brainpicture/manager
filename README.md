@@ -16,7 +16,7 @@ sudo make install
 * **manager project_name** - get stdout of selected project
 * **manager restart project_name** - restart project
 
-Manager will be launched as daemon from the directory, you install it from, and will start with system startup
+Manager will be launched as daemon from the directory, you install it from, and will be started with system startup
 
 Edit config.json to add or remove projects, manager will automaticly update settings after config.json will be saved
 
@@ -35,4 +35,4 @@ You can restart manager daemon using
 ```
 restart manager
 ```
-but with normal usage it never would be neaded
+but with normal usage it never would be needed
