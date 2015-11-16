@@ -16,7 +16,7 @@ sudo make install
 * **manager project_name** - get stdout of the selected project
 * **manager restart project_name** - restart a project
 
-Manager will be launched as a daemon from a directory it is installed to, and will start at the system startup.
+Manager will be launched as a daemon from the directory it is installed to, and will start at the system startup.
 
 Edit config.json to add or remove projects, manager will automaticly update settings after config.json is saved.
 
@@ -28,7 +28,7 @@ projects: {
   }
 },
 
-port: 8169 // port the daemon will use to communicate with client
+port: 8169 // port the daemon will use to communicate with a client
 ```
 
 You can restart the manager daemon using
